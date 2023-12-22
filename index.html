@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EtherFlip Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.3.0/web3.min.js"></script>
+
+    <style>
+        body {
+            font-family: "Comic Sans MS";
+            background-color: #fff;
+            color: magenta;
+            text-align: center;
+            padding: 20px;
+            background-image: url("./doge.png");
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #connectWallet, #betHeads, #betTails {
+            background-color: orange;
+            color: blue;
+            font-weight: bold;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            font-family: "Comic Sans MS";
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 40px;
+            transition: background-color 0.3s;
+        }
+
+        #connectWallet:hover, #betHeads:hover, #betTails:hover {
+            background-color: orange;
+        }
+
+        #connectWallet {
+            width: 300px;
+            height: 60px;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        #gameInterface {
+            margin-top: 20px;
+        }
+
+        input[type=text] {
+            width: 200px;
+            padding: 12px 20px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type=text]:focus {
+            border: 2px solid orange;
+        }
+
+        #lastResult {
+            background-image: linear-gradient(45deg, magenta, cyan);
+            background-size: 100%;
+            -webkit-background-clip: text;
+            -moz-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            -moz-text-fill-color: transparent;
+            font-weight: bolder;
+            text-transform: uppercase;
+            font-size: 32px;
+        }
+
+        #balance {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .coinButton {
+            color: purple;
+            background-color: #fff;
+            width: 100px; /* Adjust size as needed */
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.3s;
+        }
+
+        .coinButton:hover {
+            transform: scale(1.1);
+        }
+
+        #betHeads, #betTails {
+            background-color: #fff !important;
+        }
+
+
+        #betAmountContainer {
+            margin: 40px 0 20px 0;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 300px;
+            margin: 10px 0;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border: none;
+            border-radius: 3px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            border: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 12px;
+            background: deepskyblue;
+            margin-top: -8px;
+            cursor: pointer;
+        }
+
+        #userBalance, #contractBalance {
+            padding: 10px;
+            margin: 20px auto;
+            width: 300px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        .balanceTitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .balanceValue {
+            font-size: 30px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #main-wrapper {
+            margin: 140px auto;
+            background-color: #ffffff;
+            padding: 40px;
+            width: 500px;
+            border-radius: 50px;
+        }
+
+        #userBalance {
+            color: mediumblue;
+        }
+        #contractBalance {
+            color: deeppink;
+        }
+        /* Add additional styles as needed */
+
+        h1 {
+            background-color: #f3ec78;
+            background-image: linear-gradient(45deg, magenta, cyan);
+            background-size: 100%;
+            -webkit-background-clip: text;
+            -moz-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            -moz-text-fill-color: transparent;
+            font-weight: bolder;
+            text-transform: uppercase;
+            font-size: 32px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="main-wrapper">
+
+    <h1>Much Flip, Such Gamble</h1>
+    <button id="connectWallet">Connect Wallet</button>
+
+    <div id="gameInterface" style="display: none;">
+        <div id="userBalance">
+            <div class="balanceTitle">Your Balance</div>
+            <div class="balanceValue">0 ETH</div>
+        </div>
+
+        <div id="contractBalance">
+            <div class="balanceTitle">Contract Balance</div>
+            <div class="balanceValue">0 ETH</div>
+        </div>
+
+        <div id="betAmountContainer">
+            <label for="betAmount">Bet Amount <span id="betAmountDisplay">(0 ETH)</span></label><br/>
+            <input type="range" id="betAmount" min="0" max="100" value="0">
+        </div>
+
+        <div id="coinButtons">
+            <img src="./head.png" id="betHeads" class="coinButton">
+            <img src="./tail.png" id="betTails" class="coinButton">
+        </div>
+
+        <p id="lastResult"></p>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const connectWalletButton = document.getElementById('connectWallet');
+        const betHeadsButton = document.getElementById('betHeads');
+        const betTailsButton = document.getElementById('betTails');
+        const betAmountInput = document.getElementById('betAmount');
+        const lastResult = document.getElementById('lastResult');
+        const gameInterface = document.getElementById('gameInterface');
+        const balanceDisplay = document.getElementById('balance');
+
+        let web3;
+        let contract;
+        const contractABI = [
+            {
+                "inputs": [],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": false,
+                        "internalType": "bool",
+                        "name": "win",
+                        "type": "bool"
+                    }
+                ],
+                "name": "FlipResult",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "balance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "bool",
+                        "name": "_guess",
+                        "type": "bool"
+                    }
+                ],
+                "name": "bet",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "owner",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "withdraw",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "stateMutability": "payable",
+                "type": "receive"
+            }
+        ]; // Your contract ABI here
+        const contractAddress = '78a3d3258f9353517c4df2e11b2a36924d97d744'; // Your contract address here
+
+        async function connectWallet() {
+            console.log("connecting wallet")
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    web3 = new Web3(window.ethereum);
+
+                    contract = new web3.eth.Contract(contractABI, contractAddress);
+                    gameInterface.style.display = 'block';
+                    connectWalletButton.style.display = 'none';
+                    updateBalances()
+                } catch (error) {
+                    console.error("User denied account access");
+                }
+            } else {
+                console.error("Non-Ethereum browser detected. You should consider trying MetaMask!");
+            }
+        }
+
+        async function updateBalances() {
+            const userAccount = (await web3.eth.getAccounts())[0];
+            console.log("user", userAccount)
+            const userBalance = await web3.eth.getBalance(userAccount);
+            const contractBalance = await web3.eth.getBalance(contractAddress);
+
+            let userBalanceETH = web3.utils.fromWei(userBalance, 'ether')
+            userBalanceETH = Math.round(userBalanceETH * 10) / 10
+
+            let contractBalanceETH = web3.utils.fromWei(contractBalance, 'ether')
+            contractBalanceETH = Math.round(contractBalanceETH * 10) / 10
+            document.getElementById('userBalance').innerText = `Your Balance: ${userBalanceETH} FLOW`;
+            document.getElementById('contractBalance').innerText = `Contract Balance: ${contractBalanceETH} FLOW`;
+
+            // Set the slider range
+            const maxBetAmount = web3.utils.fromWei(userBalance, 'ether');
+            const betAmountSlider = document.getElementById('betAmount');
+            betAmountSlider.max = maxBetAmount;
+            betAmountSlider.value = maxBetAmount / 2;  // Default to half of max
+            document.getElementById('betAmountDisplay').innerText = `${betAmountSlider.value} FLOW`;
+        }
+
+        document.getElementById('betAmount').addEventListener('input', function() {
+            document.getElementById('betAmountDisplay').innerText = `${this.value} FLOW`;
+        });
+
+        async function bet(guess) {
+            const betAmount = web3.utils.toWei(betAmountInput.value, 'ether');
+            const userAccount = (await web3.eth.getAccounts())[0]
+
+            const initialBalance = await web3.eth.getBalance(userAccount);
+            contract.methods.bet(guess).send({ from: userAccount, value: betAmount })
+
+            setTimeout(async function () {
+                console.log("check winner")
+                const newBalance = await web3.eth.getBalance(userAccount);
+                const result = newBalance > initialBalance ? "WOW, VERY WON!" : "MANY LOOSER!";
+                lastResult.innerText = `Result: ${result}`;
+                updateBalances();
+            }, 5000)
+        }
+
+        connectWalletButton.addEventListener('click', connectWallet);
+        betHeadsButton.addEventListener('click', () => bet(true));
+        betTailsButton.addEventListener('click', () => bet(false));
+    });
+</script>
+</body>
+</html>
